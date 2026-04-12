@@ -3,6 +3,7 @@ svg_file = "dummy.svg"; // Overridden by CLI
 svg_name_text = "dummy"; // Overridden by CLI
 
 // Global Parameters
+svg_scale = 1.0; // Overridden by CLI
 diameter = 86;
 radius = diameter / 2;
 base_thickness = 2; // Thickness of the base half (both halves total 4mm + extrusions)
@@ -55,8 +56,8 @@ module front_drawing() {
     if (svg_file != "") {
          translate([0, 0, base_thickness]) {
              linear_extrude(height=extrusion_height) {
-                 // Scale slightly to provide clearance away from the raised border wall
-                 scale([0.92, 0.92])
+                 // Scale dynamically based on Python processing to fill the circle gracefully
+                 scale([svg_scale, svg_scale])
                      // Add a microscopic offset to automatically fix unclosed/self-intersecting paths inside the SVG during CGAL conversion
                      // We use a default delta of 0.2mm to artificially thicken the lines, ensuring they are comfortably printable with a standard 0.4mm 3D printer nozzle.
                      offset(delta=0.2) import(svg_file, center=true);

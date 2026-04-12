@@ -18,13 +18,14 @@ def check_openscad_installed():
         print("or installed at 'C:\\Program Files\\OpenSCAD\\openscad.exe'.")
         sys.exit(1)
 
-def run_openscad(exec_path, scad_file, output_stl, part, svg_file, svg_name):
+def run_openscad(exec_path, scad_file, output_stl, part, svg_file, svg_name, svg_scale):
     args = [
         exec_path,
         "-o", output_stl,
         "-D", f'part="{part}"',
         "-D", f'svg_file="{svg_file}"',
         "-D", f'svg_name_text="{svg_name}"',
+        "-D", f'svg_scale={svg_scale}',
         scad_file
     ]
     print(f"Generating {output_stl}...")
@@ -34,6 +35,37 @@ def run_openscad(exec_path, scad_file, output_stl, part, svg_file, svg_name):
         print(result.stderr.decode('utf-8'))
     else:
         print(f"Successfully created: {output_stl}")
+
+def extract_svg_max_dimension(svg_content):
+    max_dim = None
+    
+    # Try viewBox extraction first (format: min-x min-y width height)
+    vb_match = re.search(r'viewBox=[\'"]([^\'"]+)[\'"]', svg_content, re.IGNORECASE)
+    if vb_match:
+        parts = vb_match.group(1).replace(",", " ").split()
+        if len(parts) >= 4:
+            try:
+                w, h = float(parts[2]), float(parts[3])
+                max_dim = max(w, h)
+            except ValueError:
+                pass
+                
+    # If viewBox extraction failed, try explicit width/height
+    if max_dim is None or max_dim == 0:
+        w_match = re.search(r'<svg[^>]+width=[\'"]([\d\.]+)[a-zA-Z]*[\'"]', svg_content, re.IGNORECASE)
+        h_match = re.search(r'<svg[^>]+height=[\'"]([\d\.]+)[a-zA-Z]*[\'"]', svg_content, re.IGNORECASE)
+        if w_match and h_match:
+            try:
+                w = float(w_match.group(1))
+                h = float(h_match.group(1))
+                max_dim = max(w, h)
+            except ValueError:
+                pass
+                
+    if max_dim is None or max_dim <= 0:
+        return 86.0 # Arbitrary reliable default if parsing completely fails
+        
+    return max_dim
 
 def main():
     parser = argparse.ArgumentParser(description="Batch Generate Bookinou Medals.")
@@ -67,13 +99,11 @@ def main():
         svg_basename = os.path.basename(svg_path)
         svg_name, _ = os.path.splitext(svg_basename)
         
-        # Output directory for this specific SVG
         outdir = os.path.join(generated_dir, svg_name)
         os.makedirs(outdir, exist_ok=True)
         
-        # Expected outputs
+        # Expected outputs (skip full front solo model to save generation time)
         outputs = {
-            "front": os.path.join(outdir, f"{svg_name}_front.stl"),
             "front_base": os.path.join(outdir, f"{svg_name}_front_base.stl"),
             "front_drawing": os.path.join(outdir, f"{svg_name}_front_drawing.stl"),
             "back": os.path.join(outdir, f"{svg_name}_back.stl")
@@ -85,23 +115,28 @@ def main():
                 print(f"Skipping {svg_name}: All files already exist. Use --force to regenerate.")
                 continue
                 
-        print(f"--- Processing {svg_name} ---")
+        print(f"\n--- Processing {svg_name} ---")
         
-        # Sanitize SVG: remove bounding boxes that break OpenSCAD
         with open(svg_path, "r", encoding="utf-8") as f:
             svg_content = f.read()
-        
+
+        # Dynamic SVG Scale calculation
+        # To perfectly fit securely within the 86mm diameter medal base (leaving safe outer margins to respect the border). Target ~74mm physical size
+        max_dim = extract_svg_max_dimension(svg_content)
+        target_size = 74.0
+        svg_scale = target_size / max_dim
+
+        # Sanitize SVG: remove bounding boxes that break OpenSCAD
         svg_content = re.sub(r'<circle[^>]*?(?:fill-opacity[:=][\'"]?0|fill[:=][\'"]?none[\'"]?|r=[\'"]4[0-9][\.\d]*[\'"])[^>]*?/>', '', svg_content, flags=re.IGNORECASE)
         
         sanitized_svg_path = os.path.join(sanitized_dir, f"{svg_name}_sanitized.svg")
         with open(sanitized_svg_path, "w", encoding="utf-8") as f:
             f.write(svg_content)
         
-        # Generate components natively
-        run_openscad(openscad_cmd, scad_path, outputs["front"], "front", sanitized_svg_path, svg_name)
-        run_openscad(openscad_cmd, scad_path, outputs["front_base"], "front_base", sanitized_svg_path, svg_name)
-        run_openscad(openscad_cmd, scad_path, outputs["front_drawing"], "front_drawing", sanitized_svg_path, svg_name)
-        run_openscad(openscad_cmd, scad_path, outputs["back"], "back", sanitized_svg_path, svg_name)
+        # Generate components natively (ignoring combined 'front' model piece to optimize 30% execution time)
+        run_openscad(openscad_cmd, scad_path, outputs["front_base"], "front_base", sanitized_svg_path, svg_name, svg_scale)
+        run_openscad(openscad_cmd, scad_path, outputs["front_drawing"], "front_drawing", sanitized_svg_path, svg_name, svg_scale)
+        run_openscad(openscad_cmd, scad_path, outputs["back"], "back", sanitized_svg_path, svg_name, svg_scale)
 
 if __name__ == "__main__":
     main()

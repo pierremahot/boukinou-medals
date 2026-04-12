@@ -1,4 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="-30 -30 60 60">
-    <circle cx="0" cy="0" r="20" fill="none" stroke="black" stroke-width="2" />
-    <path d="M -10 10 L 0 -10 L 10 10 Z" fill="black" />
+<svg xmlns="http://www.w3.org/2000/svg" width="86mm" height="86mm" viewBox="0 0 86 86">
+    <!-- Visual background circle matching Blanche Neige -->
+    <circle cx="43" cy="43" r="43" fill="none" stroke="black" stroke-width="0.5" />
+    <!-- Original dummy triangle shifted to new 43,43 center | Original 60x60 -> Scale to 86x86 = 1.4333 -->
+    <g transform="translate(43, 43) scale(1.43333)">
+        <path d="M -10 10 L 0 -10 L 10 10 Z" fill="black" />
+    </g>
 </svg>

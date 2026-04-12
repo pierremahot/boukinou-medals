@@ -18,13 +18,13 @@ def check_openscad_installed():
         print("or installed at 'C:\\Program Files\\OpenSCAD\\openscad.exe'.")
         sys.exit(1)
 
-def run_openscad(exec_path, scad_file, output_stl, part, svg_file, svg_name, svg_scale):
+def run_openscad(exec_path, scad_file, output_stl, part, svg_file, svg_name, display_name, svg_scale):
     args = [
         exec_path,
         "-o", output_stl,
         "-D", f'part="{part}"',
         "-D", f'svg_file="{svg_file}"',
-        "-D", f'svg_name_text="{svg_name}"',
+        "-D", f'svg_name_text="{display_name}"',
         "-D", f'svg_scale={svg_scale}',
         scad_file
     ]
@@ -133,10 +133,13 @@ def main():
         with open(sanitized_svg_path, "w", encoding="utf-8") as f:
             f.write(svg_content)
         
+        # Compute clean display string natively
+        display_name = svg_name.replace("_", " ").replace("-", " ")
+        
         # Generate components natively (ignoring combined 'front' model piece to optimize 30% execution time)
-        run_openscad(openscad_cmd, scad_path, outputs["front_base"], "front_base", sanitized_svg_path, svg_name, svg_scale)
-        run_openscad(openscad_cmd, scad_path, outputs["front_drawing"], "front_drawing", sanitized_svg_path, svg_name, svg_scale)
-        run_openscad(openscad_cmd, scad_path, outputs["back"], "back", sanitized_svg_path, svg_name, svg_scale)
+        run_openscad(openscad_cmd, scad_path, outputs["front_base"], "front_base", sanitized_svg_path, svg_name, display_name, svg_scale)
+        run_openscad(openscad_cmd, scad_path, outputs["front_drawing"], "front_drawing", sanitized_svg_path, svg_name, display_name, svg_scale)
+        run_openscad(openscad_cmd, scad_path, outputs["back"], "back", sanitized_svg_path, svg_name, display_name, svg_scale)
 
 if __name__ == "__main__":
     main()

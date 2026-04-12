@@ -1,0 +1,17 @@
+# Ignore all generated STL output files
+generated/
+
+# Ignore intermediate sanitized files
+svg/sanitized/
+
+# Ignore all user-provided SVG files except the template dummy
+svg/*.svg
+!svg/dummy.svg
+
+# Ignore python caches
+__pycache__/
+*.pyc
+
+# Ignore testing and scratch artifacts
+*.stl
+*.log

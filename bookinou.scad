@@ -6,17 +6,18 @@ svg_name_text = "dummy"; // Overridden by CLI
 svg_scale = 1.0; // Overridden by CLI
 diameter = 86;
 radius = diameter / 2;
-base_thickness = 2; // Thickness of the base half (both halves total 4mm + extrusions)
 
 // Front Half Parameters
-extrusion_height = 0.5;
+front_base_thickness = 0.4; // 2 layers at 0.2mm
+extrusion_height = 0.6; // 3 layers at 0.2mm
 border_thickness = 2; // 2mm wide raised border
 
 // Back Half Parameters
+back_base_thickness = 1.0; // 5 layers at 0.2mm
 cutout_diameter = 39;
 cutout_radius = cutout_diameter / 2;
-cutout_depth = 0.5;
-text_depth = 0.4;
+cutout_depth = 0.4; // 2 layers at 0.2mm
+text_depth = 0.6; // 3 layers at 0.2mm
 font_size = 5;
 
 // Rendering Smoothness
@@ -38,12 +39,12 @@ module circular_text(txt, r, font_size, angle_spread) {
 
 module front_base() {
     // Flat Base
-    cylinder(h=base_thickness, r=radius);
+    cylinder(h=front_base_thickness, r=radius);
 }
 
 module front_drawing() {
     // Raised Border Layer
-    translate([0, 0, base_thickness]) {
+    translate([0, 0, front_base_thickness]) {
         difference() {
             cylinder(h=extrusion_height, r=radius);
             // Slightly deeper cut for a clean subtraction
@@ -54,7 +55,7 @@ module front_drawing() {
 
     // Extruded SVG (Placed on top of the base layer)
     if (svg_file != "") {
-         translate([0, 0, base_thickness]) {
+         translate([0, 0, front_base_thickness]) {
              linear_extrude(height=extrusion_height) {
                  // Scale dynamically based on Python processing to fill the circle gracefully
                  scale([svg_scale, svg_scale])
@@ -84,10 +85,10 @@ if (part == "front_drawing") {
 if (part == "back") {
     difference() {
         // Flat Base
-        cylinder(h=base_thickness, r=radius);
+        cylinder(h=back_base_thickness, r=radius);
         
-        // Cutout for sticker on the "inner"/front side (Z = base_thickness - cutout_depth upwards)
-        translate([0, 0, base_thickness - cutout_depth]) {
+        // Cutout for sticker on the "inner"/front side (Z = back_base_thickness - cutout_depth upwards)
+        translate([0, 0, back_base_thickness - cutout_depth]) {
             cylinder(h=cutout_depth + 1, r=cutout_radius);
         }
         

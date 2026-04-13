@@ -8,12 +8,12 @@ diameter = 86;
 radius = diameter / 2;
 
 // Front Half Parameters
-front_base_thickness = 0.4; // 2 layers at 0.2mm
+front_base_thickness = 1.0; // 5 layers at 0.2mm (was 0.4)
 extrusion_height = 0.6; // 3 layers at 0.2mm
 border_thickness = 2; // 2mm wide raised border
 
 // Back Half Parameters
-back_base_thickness = 1.0; // 5 layers at 0.2mm
+back_base_thickness = 1.6; // 8 layers at 0.2mm (was 1.0)
 cutout_diameter = 39;
 cutout_radius = cutout_diameter / 2;
 cutout_depth = 0.4; // 2 layers at 0.2mm

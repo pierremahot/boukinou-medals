@@ -4,6 +4,8 @@ svg_name_text = "dummy"; // Overridden by CLI
 
 // Global Parameters
 svg_scale = 1.0; // Overridden by CLI
+svg_width = 86.0; // Overridden by CLI
+svg_height = 86.0; // Overridden by CLI
 diameter = 86;
 radius = diameter / 2;
 
@@ -59,9 +61,11 @@ module front_drawing() {
              linear_extrude(height=extrusion_height) {
                  // Scale dynamically based on Python processing to fill the circle gracefully
                  scale([svg_scale, svg_scale])
-                     // Add a microscopic offset to automatically fix unclosed/self-intersecting paths inside the SVG during CGAL conversion
-                     // We use a default delta of 0.2mm to artificially thicken the lines, ensuring they are comfortably printable with a standard 0.4mm 3D printer nozzle.
-                     offset(delta=0.2) import(svg_file, center=true);
+                     // Shift the SVG based on its original viewBox coordinate system to center it at [0,0]
+                     translate([-svg_width/2, -svg_height/2])
+                         // Add a microscopic offset to automatically fix unclosed/self-intersecting paths inside the SVG during CGAL conversion
+                         // We use a default delta of 0.2mm to artificially thicken the lines, ensuring they are comfortably printable with a standard 0.4mm 3D printer nozzle.
+                         offset(delta=0.2) import(svg_file, center=false);
              }
          }
     }

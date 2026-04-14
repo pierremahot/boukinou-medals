@@ -18,7 +18,7 @@ def check_openscad_installed():
         print("or installed at 'C:\\Program Files\\OpenSCAD\\openscad.exe'.")
         sys.exit(1)
 
-def run_openscad(exec_path, scad_file, output_stl, part, svg_file, svg_name, display_name, svg_scale):
+def run_openscad(exec_path, scad_file, output_stl, part, svg_file, svg_name, display_name, svg_scale, svg_w, svg_h):
     args = [
         exec_path,
         "-o", output_stl,
@@ -26,6 +26,8 @@ def run_openscad(exec_path, scad_file, output_stl, part, svg_file, svg_name, dis
         "-D", f'svg_file="{svg_file}"',
         "-D", f'svg_name_text="{display_name}"',
         "-D", f'svg_scale={svg_scale}',
+        "-D", f'svg_width={svg_w}',
+        "-D", f'svg_height={svg_h}',
         scad_file
     ]
     print(f"Generating {output_stl}...")
@@ -36,8 +38,8 @@ def run_openscad(exec_path, scad_file, output_stl, part, svg_file, svg_name, dis
     else:
         print(f"Successfully created: {output_stl}")
 
-def extract_svg_max_dimension(svg_content):
-    max_dim = None
+def extract_svg_dimensions(svg_content):
+    w, h = 86.0, 86.0
     
     # Try viewBox extraction first (format: min-x min-y width height)
     vb_match = re.search(r'viewBox=[\'"]([^\'"]+)[\'"]', svg_content, re.IGNORECASE)
@@ -46,30 +48,27 @@ def extract_svg_max_dimension(svg_content):
         if len(parts) >= 4:
             try:
                 w, h = float(parts[2]), float(parts[3])
-                max_dim = max(w, h)
+                return w, h
             except ValueError:
                 pass
                 
     # If viewBox extraction failed, try explicit width/height
-    if max_dim is None or max_dim == 0:
-        w_match = re.search(r'<svg[^>]+width=[\'"]([\d\.]+)[a-zA-Z]*[\'"]', svg_content, re.IGNORECASE)
-        h_match = re.search(r'<svg[^>]+height=[\'"]([\d\.]+)[a-zA-Z]*[\'"]', svg_content, re.IGNORECASE)
-        if w_match and h_match:
-            try:
-                w = float(w_match.group(1))
-                h = float(h_match.group(1))
-                max_dim = max(w, h)
-            except ValueError:
-                pass
-                
-    if max_dim is None or max_dim <= 0:
-        return 86.0 # Arbitrary reliable default if parsing completely fails
-        
-    return max_dim
+    w_match = re.search(r'<svg[^>]+width=[\'"]([\d\.]+)[a-zA-Z]*[\'"]', svg_content, re.IGNORECASE)
+    h_match = re.search(r'<svg[^>]+height=[\'"]([\d\.]+)[a-zA-Z]*[\'"]', svg_content, re.IGNORECASE)
+    if w_match and h_match:
+        try:
+            w = float(w_match.group(1))
+            h = float(h_match.group(1))
+            return w, h
+        except ValueError:
+            pass
+            
+    return w, h
 
 def main():
     parser = argparse.ArgumentParser(description="Batch Generate Bookinou Medals.")
     parser.add_argument("-f", "--force", action="store_true", help="Force regeneration of all medals even if they already exist.")
+    parser.add_argument("-s", "--select", nargs="+", help="List of specific SVG names to generate (e.g. -s La_Belle_et_le_Clochard or -s nemo.svg)")
     
     args = parser.parse_args()
     
@@ -91,6 +90,13 @@ def main():
     # Process all svgs in the svg directory
     svg_files = [f for f in glob.glob(os.path.join(svg_dir, "*.svg")) if os.path.isfile(f)]
     
+    if args.select:
+        selected_names = [os.path.splitext(os.path.basename(name))[0] for name in args.select]
+        svg_files = [f for f in svg_files if os.path.splitext(os.path.basename(f))[0] in selected_names]
+        if not svg_files:
+            print(f"None of the selected SVGs {selected_names} were found in {svg_dir}.")
+            return
+
     if not svg_files:
         print(f"No SVG files found in {svg_dir}.")
         return
@@ -121,9 +127,10 @@ def main():
             svg_content = f.read()
 
         # Dynamic SVG Scale calculation
-        # To perfectly fit securely within the 86mm diameter medal base (leaving safe outer margins to respect the border). Target ~74mm physical size
-        max_dim = extract_svg_max_dimension(svg_content)
-        target_size = 74.0
+        # To perfectly fit the 86mm diameter medal base (matching original SVG scale). Target 86mm physical size
+        svg_w, svg_h = extract_svg_dimensions(svg_content)
+        max_dim = max(svg_w, svg_h)
+        target_size = 83.0
         svg_scale = target_size / max_dim
 
         # Sanitize SVG: remove bounding boxes that break OpenSCAD
@@ -137,9 +144,9 @@ def main():
         display_name = svg_name.replace("_", " ").replace("-", " ")
         
         # Generate components natively (ignoring combined 'front' model piece to optimize 30% execution time)
-        run_openscad(openscad_cmd, scad_path, outputs["front_base"], "front_base", sanitized_svg_path, svg_name, display_name, svg_scale)
-        run_openscad(openscad_cmd, scad_path, outputs["front_drawing"], "front_drawing", sanitized_svg_path, svg_name, display_name, svg_scale)
-        run_openscad(openscad_cmd, scad_path, outputs["back"], "back", sanitized_svg_path, svg_name, display_name, svg_scale)
+        run_openscad(openscad_cmd, scad_path, outputs["front_base"], "front_base", sanitized_svg_path, svg_name, display_name, svg_scale, svg_w, svg_h)
+        run_openscad(openscad_cmd, scad_path, outputs["front_drawing"], "front_drawing", sanitized_svg_path, svg_name, display_name, svg_scale, svg_w, svg_h)
+        run_openscad(openscad_cmd, scad_path, outputs["back"], "back", sanitized_svg_path, svg_name, display_name, svg_scale, svg_w, svg_h)
 
 if __name__ == "__main__":
     main()

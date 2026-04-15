@@ -107,10 +107,19 @@ if (part == "back") {
                     
                     // Bottom arc: svg_name_text
                     // We rotate 180 degrees so it's at the bottom
-                    rotate([0, 0, 180])
+                    rotate([0, 0, 180]) {
+                        // Dynamically calculate spread and font size to prevent overlapping for very long texts
+                        n_chars = len(svg_name_text);
+                        desired_spread = n_chars > 1 ? (n_chars - 1) * 11 : 0;
+                        max_spread = 220; // Leave enough margin so it doesn't overlap with the top "bookinou" text
+                        actual_spread = min(max_spread, max(desired_spread, 10)); // Ensure at least 10 for very short text
+                        scale_factor = desired_spread > max_spread ? max_spread / desired_spread : 1.0;
+                        adj_font_size = font_size * scale_factor;
+                        
                         // Note: Because it's at the bottom, pointing away from center, the text will be "upside down" relative to the whole model's UP,
                         // which is correct for reading it sequentially when rotating the medal.
-                        circular_text(svg_name_text, r=radius - 12, font_size=font_size, angle_spread=min(120, len(svg_name_text) * 12));
+                        circular_text(svg_name_text, r=radius - 12, font_size=adj_font_size, angle_spread=actual_spread);
+                    }
                 }
             }
         }
